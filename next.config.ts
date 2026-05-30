@@ -1,7 +1,10 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  /* config options here */
-};
+  output: 'export',
+  basePath: '/family-weekly',
+  trailingSlash: true,
+  images: { unoptimized: true },
+}
 
-export default nextConfig;
+export default nextConfig

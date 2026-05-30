@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { MemberEntry } from '@/lib/types'
+import { getReport, saveReport } from '@/lib/storage'
 import { MemberAvatar, MEMBER_CONFIG } from './MemberAvatar'
 
 interface Props {
@@ -17,14 +18,12 @@ export function ReflectionEditor({ entries, reportId, editable }: Props) {
 
   async function handleSave(member: string, reflection: string) {
     setSaving(member)
+    const report = await getReport(reportId)
+    if (!report) return
     const updatedEntries = localEntries.map(e =>
       e.member === member ? { ...e, reflection, updatedAt: new Date().toISOString() } : e
     )
-    await fetch(`/api/reports/${reportId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ entries: updatedEntries }),
-    })
+    await saveReport({ ...report, entries: updatedEntries })
     setLocalEntries(updatedEntries)
     setSaving(null)
     setSaved(member)
@@ -63,36 +62,21 @@ export function ReflectionEditor({ entries, reportId, editable }: Props) {
   )
 }
 
-function EntryEditField({
-  entry,
-  saving,
-  saved,
-  onSave,
-}: {
-  entry: MemberEntry
-  saving: boolean
-  saved: boolean
-  onSave: (text: string) => void
+function EntryEditField({ entry, saving, saved, onSave }: {
+  entry: MemberEntry; saving: boolean; saved: boolean; onSave: (t: string) => void
 }) {
   const [text, setText] = useState(entry.reflection)
   const [dirty, setDirty] = useState(false)
 
   return (
     <div className="space-y-2">
-      <textarea
-        value={text}
-        onChange={e => { setText(e.target.value); setDirty(true) }}
-        placeholder="寫下這週的心得、感受或有趣的事…"
-        rows={4}
-        className="w-full rounded-xl border border-white/50 bg-white/70 p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-white/80"
-      />
+      <textarea value={text} onChange={e => { setText(e.target.value); setDirty(true) }}
+        placeholder="寫下這週的心得、感受或有趣的事…" rows={4}
+        className="w-full rounded-xl border border-white/50 bg-white/70 p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-white/80" />
       <div className="flex items-center justify-between">
         <span className="text-xs opacity-50">{text.length} 字</span>
-        <button
-          onClick={() => { onSave(text); setDirty(false) }}
-          disabled={saving || !dirty}
-          className="px-4 py-1.5 rounded-lg bg-white/70 hover:bg-white text-sm font-medium disabled:opacity-40 transition-colors"
-        >
+        <button onClick={() => { onSave(text); setDirty(false) }} disabled={saving || !dirty}
+          className="px-4 py-1.5 rounded-lg bg-white/70 hover:bg-white text-sm font-medium disabled:opacity-40 transition-colors">
           {saving ? '儲存中…' : saved ? '✓ 已儲存' : '儲存'}
         </button>
       </div>

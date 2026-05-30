@@ -1,52 +1,75 @@
+import { supabase } from './supabase'
 import { WeeklyReport } from './types'
-import fs from 'fs'
-import path from 'path'
+import { generateId } from './utils'
 
-const DATA_FILE = path.join(process.cwd(), 'data', 'reports.json')
-
-function ensureDataDir() {
-  const dir = path.dirname(DATA_FILE)
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
-  if (!fs.existsSync(DATA_FILE)) fs.writeFileSync(DATA_FILE, '[]')
+function toRow(r: WeeklyReport) {
+  return {
+    id: r.id,
+    year: r.year,
+    week: r.week,
+    title: r.title,
+    start_date: r.startDate,
+    end_date: r.endDate,
+    entries: r.entries,
+    photos: r.photos,
+    created_at: r.createdAt,
+  }
 }
 
-function readAll(): WeeklyReport[] {
-  ensureDataDir()
-  return JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'))
-}
-
-function writeAll(reports: WeeklyReport[]) {
-  ensureDataDir()
-  fs.writeFileSync(DATA_FILE, JSON.stringify(reports, null, 2))
+function fromRow(row: Record<string, unknown>): WeeklyReport {
+  return {
+    id: row.id as string,
+    year: row.year as number,
+    week: row.week as number,
+    title: row.title as string,
+    startDate: row.start_date as string,
+    endDate: row.end_date as string,
+    entries: row.entries as WeeklyReport['entries'],
+    photos: row.photos as WeeklyReport['photos'],
+    createdAt: row.created_at as string,
+  }
 }
 
 export async function getAllReports(): Promise<WeeklyReport[]> {
-  const reports = readAll()
-  return reports.sort((a, b) => {
-    if (b.year !== a.year) return b.year - a.year
-    return b.week - a.week
-  })
+  const { data, error } = await supabase
+    .from('reports')
+    .select('*')
+    .order('year', { ascending: false })
+    .order('week', { ascending: false })
+  if (error) throw error
+  return (data ?? []).map(fromRow)
 }
 
 export async function getReport(id: string): Promise<WeeklyReport | null> {
-  const reports = readAll()
-  return reports.find(r => r.id === id) ?? null
-}
-
-export async function getReportByWeek(year: number, week: number): Promise<WeeklyReport | null> {
-  const reports = readAll()
-  return reports.find(r => r.year === year && r.week === week) ?? null
+  const { data, error } = await supabase
+    .from('reports')
+    .select('*')
+    .eq('id', id)
+    .single()
+  if (error) return null
+  return fromRow(data)
 }
 
 export async function saveReport(report: WeeklyReport): Promise<void> {
-  const reports = readAll()
-  const idx = reports.findIndex(r => r.id === report.id)
-  if (idx >= 0) reports[idx] = report
-  else reports.push(report)
-  writeAll(reports)
+  const { error } = await supabase.from('reports').upsert(toRow(report))
+  if (error) throw error
 }
 
 export async function deleteReport(id: string): Promise<void> {
-  const reports = readAll()
-  writeAll(reports.filter(r => r.id !== id))
+  const { error } = await supabase.from('reports').delete().eq('id', id)
+  if (error) throw error
+}
+
+export async function uploadPhoto(file: File, reportId: string): Promise<string> {
+  const ext = file.name.split('.').pop() || 'jpg'
+  const path = `${reportId}/${generateId()}.${ext}`
+  const { error } = await supabase.storage.from('photos').upload(path, file)
+  if (error) throw error
+  const { data } = supabase.storage.from('photos').getPublicUrl(path)
+  return data.publicUrl
+}
+
+export async function deletePhoto(url: string): Promise<void> {
+  const match = url.match(/\/object\/public\/photos\/(.+)$/)
+  if (match) await supabase.storage.from('photos').remove([match[1]])
 }
