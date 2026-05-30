@@ -10,9 +10,14 @@ import { MemberAvatar } from '@/components/MemberAvatar'
 export default function Home() {
   const [reports, setReports] = useState<WeeklyReport[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    getAllReports().then(r => { setReports(r); setLoading(false) })
+    const timeout = setTimeout(() => setError('連線逾時，請確認 Supabase 設定是否正確'), 8000)
+    getAllReports()
+      .then(r => { setReports(r); setLoading(false) })
+      .catch(e => setError(e.message ?? '無法連線至資料庫'))
+      .finally(() => clearTimeout(timeout))
   }, [])
 
   return (
@@ -25,7 +30,14 @@ export default function Home() {
         </div>
       </div>
 
-      {loading ? (
+      {error ? (
+        <div className="text-center py-16">
+          <p className="text-4xl mb-4">⚠️</p>
+          <p className="text-red-500 font-medium mb-2">無法載入資料</p>
+          <p className="text-gray-400 text-sm max-w-sm mx-auto">{error}</p>
+          <p className="text-gray-400 text-xs mt-4">請確認：Supabase Secrets 已設定、reports 資料表已建立</p>
+        </div>
+      ) : loading ? (
         <div className="text-center py-16 text-gray-400">載入中…</div>
       ) : reports.length === 0 ? (
         <div className="text-center py-16">
