@@ -1,2 +1,2 @@
 :HL["/family-weekly/_next/static/chunks/0c85u0t32cuxq.css","style"]
-0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}},"staleTime":300,"buildId":"7YDgjqwQzdx9Rpel-LybE"}
+0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}},"staleTime":300,"buildId":"U0uejh4WErV9dPd7FVFCQ"}
